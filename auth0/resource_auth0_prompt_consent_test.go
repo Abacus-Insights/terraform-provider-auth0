@@ -17,6 +17,7 @@ func TestAccPromptConsent(t *testing.T) {
 			{
 				Config: testAccPromptConsentCreate,
 				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("auth0_prompt_consent.prompt_consent", "language", "en"),
 					resource.TestCheckResourceAttr("auth0_prompt_consent.prompt_consent", "consent.0.page_title", "page_title"),
 					resource.TestCheckResourceAttr("auth0_prompt_consent.prompt_consent", "consent.0.title", "title"),
 					resource.TestCheckResourceAttr("auth0_prompt_consent.prompt_consent", "consent.0.picker_title", "picker_title"),
@@ -33,6 +34,7 @@ func TestAccPromptConsent(t *testing.T) {
 			{
 				Config: testAccPromptConsentUpdate,
 				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("auth0_prompt_consent.prompt_consent", "language", "en"),
 					resource.TestCheckResourceAttr("auth0_prompt_consent.prompt_consent", "consent.0.page_title", "updated_page_title"),
 					resource.TestCheckResourceAttr("auth0_prompt_consent.prompt_consent", "consent.0.title", "updated_title"),
 					resource.TestCheckResourceAttr("auth0_prompt_consent.prompt_consent", "consent.0.picker_title", "updated_picker_title"),
@@ -53,8 +55,8 @@ func TestAccPromptConsent(t *testing.T) {
 const testAccPromptConsentCreate = `
 
 resource "auth0_prompt_consent" "prompt_consent" {
+    language = "en"
 	consent {
-		language = "en"
 		  page_title = "page_title"
 		  title = "title"
 		  picker_title = "picker_title"
@@ -73,8 +75,8 @@ resource "auth0_prompt_consent" "prompt_consent" {
 const testAccPromptConsentUpdate = `
 
 resource "auth0_prompt_consent" "prompt_consent" {
-	consent {
-		language = "en"
+    language = "en"
+    consent {
 		page_title = "updated_page_title"
 		title = "updated_title"
 		picker_title = "updated_picker_title"
