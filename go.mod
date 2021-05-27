@@ -8,4 +8,4 @@ require (
 	gopkg.in/auth0.v5 v5.15.0
 )
 
-replace gopkg.in/auth0.v5 => github.com/Abacus-Insights/auth0 v1.3.1-0.20210512201735-a335ec727e5e
+replace gopkg.in/auth0.v5 => /Users/arthuston/Documents/Code/Repos/lunatic-dove/cms-interop/auth0
