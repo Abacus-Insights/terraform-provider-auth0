@@ -143,6 +143,7 @@ func deletePromptConsent(d *schema.ResourceData, m interface{}) error {
 
 func buildPromptConsent(d *schema.ResourceData) *management.PromptConsent {
 	pc := &management.PromptConsent{}
+	pc.Language = *String(d, "language")
 
 	List(d, "consent").Elem(func(d ResourceData) {
 		pc.Consent = &management.ScreenConsent{
