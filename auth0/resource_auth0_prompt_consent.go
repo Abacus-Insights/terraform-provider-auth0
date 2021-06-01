@@ -21,8 +21,8 @@ func newPromptConsent() *schema.Resource {
 		},
 		Schema: map[string]*schema.Schema{
 			"language": {
-				Type: schema.TypeString,
-				Optional: false,
+				Type:     schema.TypeString,
+				Required: true,
 			},
 			"consent": {
 				Type:     schema.TypeList,
