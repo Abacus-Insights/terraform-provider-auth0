@@ -3,16 +3,29 @@ PKGS ?= $$(go list ./...)
 FILES ?= $$(find . -name '*.go' | grep -v vendor)
 TESTS ?= ".*"
 COVERS ?= "c.out"
-
+SUPPORTED_ARCH = linux/amd64 darwin/amd64 darwin/arm64
+mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
+current_dir := $(shell dirname $(mkfile_path))
+PLUGIN_DIR := ~/.terraform.d/plugins
+	
 default: build
 
-build: fmtcheck
-	@go mod edit -replace="gopkg.in/auth0.v5=/Users/arthuston/Documents/Code/Repos/lunatic-dove/cms-interop/auth0"
+build: fmtcheck modedit
 	@go install
 
+buildall: fmtcheck modedit
+	@GOOS=linux GOARCH=amd64 go build -o $(current_dir)/terraform-provider-$(PKG_NAME)-linux
+	@GOOS=darwin GOARCH=amd64 go build -o $(current_dir)/terraform-provider-$(PKG_NAME)-darwin
+
 install: build
-	@mkdir -p ~/.terraform.d/plugins
-	@cp $(GOPATH)/bin/terraform-provider-auth0 ~/.terraform.d/plugins
+	@mkdir -p $(PLUGIN_DIR)
+	@cp $(GOPATH)/bin/terraform-provider-auth0 $(PLUGIN_DIR)
+
+installall: buildall
+	@mkdir -p $(PLUGIN_DIR)/{darwin,linux}_amd64
+	@cp $(current_dir)/terraform-provider-$(PKG_NAME)-linux $(PLUGIN_DIR)/linux_amd64/terraform-provider-$(PKG_NAME)
+	@cp $(current_dir)/terraform-provider-$(PKG_NAME)-darwin $(PLUGIN_DIR)/darwin_amd64/terraform-provider-$(PKG_NAME)
+
 
 sweep:
 	@echo "WARNING: This will destroy infrastructure. Use only in development accounts."
@@ -43,6 +56,9 @@ fmtcheck:
 
 errcheck:
 	@sh -c "'$(CURDIR)/scripts/errcheck.sh'"
+
+modedit:
+	@go mod edit -replace="gopkg.in/auth0.v5=$(current_dir)/../auth0"
 
 docgen:
 	go run scripts/gendocs.go -resource auth0_<resource>
