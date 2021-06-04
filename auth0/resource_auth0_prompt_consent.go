@@ -35,46 +35,57 @@ func newPromptConsent() *schema.Resource {
 						"page_title": {
 							Type:     schema.TypeString,
 							Optional: true,
+							Default:  "",
 						},
 						"title": {
 							Type:     schema.TypeString,
 							Optional: true,
+							Default:  "",
 						},
 						"picker_title": {
 							Type:     schema.TypeString,
 							Optional: true,
+							Default:  "",
 						},
 						"message_multiple_tenants": {
 							Type:     schema.TypeString,
 							Optional: true,
+							Default:  "",
 						},
 						"audience_picker_alt_text": {
 							Type:     schema.TypeString,
 							Optional: true,
+							Default:  "",
 						},
 						"message_single_tenant": {
 							Type:     schema.TypeString,
 							Optional: true,
+							Default:  "",
 						},
 						"accept_button_text": {
 							Type:     schema.TypeString,
 							Optional: true,
+							Default:  "",
 						},
 						"decline_button_text": {
 							Type:     schema.TypeString,
 							Optional: true,
+							Default:  "",
 						},
 						"invalid_action": {
 							Type:     schema.TypeString,
 							Optional: true,
+							Default:  "",
 						},
 						"invalid_audience": {
 							Type:     schema.TypeString,
 							Optional: true,
+							Default:  "",
 						},
 						"invalid_scope": {
 							Type:     schema.TypeString,
 							Optional: true,
+							Default:  "",
 						},
 					},
 				},
@@ -95,17 +106,39 @@ func createPromptConsent(d *schema.ResourceData, m interface{}) error {
 func flattenScreenConsent(pc *management.ScreenConsent) []interface{} {
 	m := make(map[string]interface{})
 	if pc != nil {
-		m["page_title"] = pc.PageTitle
-		m["title"] = pc.Title
-		m["picker_title"] = pc.PickerTitle
-		m["message_multiple_tenants"] = pc.MessageMultipleTenants
-		m["audience_picker_alt_text"] = pc.AudiencePickerAltText
-		m["message_single_tenant"] = pc.MessageSingleTenant
-		m["accept_button_text"] = pc.AcceptButtonText
-		m["decline_button_text"] = pc.DeclineButtonText
-		m["invalid_action"] = pc.InvalidAction
-		m["invalid_audience"] = pc.InvalidAudience
-		m["invalid_scope"] = pc.InvalidScope
+		if pc.PageTitle != "" {
+			m["page_title"] = pc.PageTitle
+		}
+		if pc.Title != "" {
+			m["title"] = pc.Title
+		}
+		if pc.PickerTitle != "" {
+			m["picker_title"] = pc.PickerTitle
+		}
+		if pc.MessageMultipleTenants != "" {
+			m["message_multiple_tenants"] = pc.MessageMultipleTenants
+		}
+		if pc.AudiencePickerAltText != "" {
+			m["audience_picker_alt_text"] = pc.AudiencePickerAltText
+		}
+		if pc.MessageSingleTenant != "" {
+			m["message_single_tenant"] = pc.MessageSingleTenant
+		}
+		if pc.AcceptButtonText != "" {
+			m["accept_button_text"] = pc.AcceptButtonText
+		}
+		if pc.DeclineButtonText != "" {
+			m["decline_button_text"] = pc.DeclineButtonText
+		}
+		if pc.InvalidAction != "" {
+			m["invalid_action"] = pc.InvalidAction
+		}
+		if pc.InvalidAudience != "" {
+			m["invalid_audience"] = pc.InvalidAudience
+		}
+		if pc.InvalidScope != "" {
+			m["invalid_scope"] = pc.InvalidScope
+		}
 	}
 	return []interface{}{m}
 }
@@ -129,7 +162,42 @@ func readPromptConsent(d *schema.ResourceData, m interface{}) error {
 func updatePromptConsent(d *schema.ResourceData, m interface{}) error {
 	pc := buildPromptConsent(d)
 	api := m.(*management.Management)
-	err := api.Prompt.ReplacePromptConsent(language(d), pc)
+	rpc, err := api.Prompt.ReadPromptConsent(language(d))
+	if pc.Consent.PageTitle == "" && rpc.Consent.PageTitle != "" {
+		pc.Consent.PageTitle = rpc.Consent.PageTitle
+	}
+	if pc.Consent.Title == "" && rpc.Consent.Title != "" {
+		pc.Consent.Title = rpc.Consent.Title
+	}
+	if pc.Consent.PickerTitle == "" && rpc.Consent.PickerTitle != "" {
+		pc.Consent.PickerTitle = rpc.Consent.PickerTitle
+	}
+	if pc.Consent.MessageMultipleTenants == "" && rpc.Consent.MessageMultipleTenants != "" {
+		pc.Consent.MessageMultipleTenants = rpc.Consent.MessageMultipleTenants
+	}
+	if pc.Consent.AudiencePickerAltText == "" && rpc.Consent.AudiencePickerAltText != "" {
+		pc.Consent.AudiencePickerAltText = rpc.Consent.AudiencePickerAltText
+	}
+	if pc.Consent.MessageSingleTenant == "" && rpc.Consent.MessageSingleTenant != "" {
+		pc.Consent.MessageSingleTenant = rpc.Consent.MessageSingleTenant
+	}
+	if pc.Consent.AcceptButtonText == "" && rpc.Consent.AcceptButtonText != "" {
+		pc.Consent.AcceptButtonText = rpc.Consent.AcceptButtonText
+	}
+	if pc.Consent.DeclineButtonText == "" && rpc.Consent.DeclineButtonText != "" {
+		pc.Consent.DeclineButtonText = rpc.Consent.DeclineButtonText
+	}
+	if pc.Consent.InvalidAction == "" && rpc.Consent.InvalidAction != "" {
+		pc.Consent.InvalidAction = rpc.Consent.InvalidAction
+	}
+	if pc.Consent.InvalidScope == "" && rpc.Consent.InvalidScope != "" {
+		pc.Consent.InvalidScope = rpc.Consent.InvalidScope
+	}
+
+	if err != nil {
+		return err
+	}
+	err = api.Prompt.ReplacePromptConsent(language(d), pc)
 	if err != nil {
 		return err
 	}
@@ -146,17 +214,17 @@ func buildPromptConsent(d *schema.ResourceData) *management.PromptConsent {
 
 	List(d, "consent").Elem(func(d ResourceData) {
 		pc.Consent = &management.ScreenConsent{
-			PageTitle:              *String(d, "page_title"),
-			Title:                  *String(d, "title"),
-			PickerTitle:            *String(d, "picker_title"),
-			MessageMultipleTenants: *String(d, "message_multiple_tenants"),
-			AudiencePickerAltText:  *String(d, "audience_picker_alt_text"),
-			MessageSingleTenant:    *String(d, "message_single_tenant"),
-			AcceptButtonText:       *String(d, "accept_button_text"),
-			DeclineButtonText:      *String(d, "decline_button_text"),
-			InvalidAction:          *String(d, "invalid_action"),
-			InvalidAudience:        *String(d, "invalid_audience"),
-			InvalidScope:           *String(d, "invalid_scope"),
+			PageTitle:              d.Get("page_title").(string),
+			Title:                  d.Get("title").(string),
+			PickerTitle:            d.Get("picker_title").(string),
+			MessageMultipleTenants: d.Get("message_multiple_tenants").(string),
+			AudiencePickerAltText:  d.Get("audience_picker_alt_text").(string),
+			MessageSingleTenant:    d.Get("message_single_tenant").(string),
+			AcceptButtonText:       d.Get("accept_button_text").(string),
+			DeclineButtonText:      d.Get("decline_button_text").(string),
+			InvalidAction:          d.Get("invalid_action").(string),
+			InvalidAudience:        d.Get("invalid_audience").(string),
+			InvalidScope:           d.Get("invalid_scope").(string),
 		}
 	})
 
