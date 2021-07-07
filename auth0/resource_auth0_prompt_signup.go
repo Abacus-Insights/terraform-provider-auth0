@@ -42,10 +42,6 @@ func newPromptSignup() *schema.Resource {
 	}
 }
 
-// func language(d *schema.ResourceData) string {
-// 	return *String(d, "language")
-// }
-
 func createPromptSignup(d *schema.ResourceData, m interface{}) error {
 	d.SetId(resource.UniqueId())
 	return updatePromptSignup(d, m)
