@@ -64,6 +64,7 @@ func init() {
 			"auth0_branding":        newBranding(),
 			"auth0_guardian":        newGuardian(),
 			"auth0_prompt_consent":  newPromptConsent(),
+			"auth0_prompt_signup":   newPromptSignup(),
 		},
 		ConfigureFunc: Configure,
 	}
