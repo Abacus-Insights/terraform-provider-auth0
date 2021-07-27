@@ -65,6 +65,7 @@ func init() {
 			"auth0_guardian":        newGuardian(),
 			"auth0_prompt_consent":  newPromptConsent(),
 			"auth0_prompt_signup":   newPromptSignup(),
+			"auth0_prompt_login":    newPromptLogin(),
 		},
 		ConfigureFunc: Configure,
 	}
