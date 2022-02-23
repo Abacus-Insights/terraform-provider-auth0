@@ -7,7 +7,7 @@ SUPPORTED_ARCH = linux/amd64 darwin/amd64 darwin/arm64
 mkfile_path := $(abspath $(lastword $(MAKEFILE_LIST)))
 current_dir := $(shell dirname $(mkfile_path))
 PLUGIN_DIR := ~/.terraform.d/plugins
-	
+
 default: build
 
 build: fmtcheck modedit
@@ -58,7 +58,7 @@ errcheck:
 	@sh -c "'$(CURDIR)/scripts/errcheck.sh'"
 
 modedit:
-	@go mod edit -replace="gopkg.in/auth0.v5=$(current_dir)/../auth0"
+	@go mod edit -replace="github.com/auth0/go-auth0=$(current_dir)/../auth0"
 
 docgen:
 	go run scripts/gendocs.go -resource auth0_<resource>
