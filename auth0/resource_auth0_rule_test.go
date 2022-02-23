@@ -3,10 +3,11 @@ package auth0
 import (
 	"testing"
 
-	"github.com/alexkappa/terraform-provider-auth0/auth0/internal/random"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+
+	"github.com/auth0/terraform-provider-auth0/auth0/internal/random"
 )
 
 func TestAccRule(t *testing.T) {
@@ -18,7 +19,7 @@ func TestAccRule(t *testing.T) {
 			"auth0": Provider(),
 		},
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: random.Template(testAccRule, rand),
 				Check: resource.ComposeTestCheckFunc(
 					random.TestCheckResourceAttr("auth0_rule.my_rule", "name", "acceptance-test-{{.random}}", rand),

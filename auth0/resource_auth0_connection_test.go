@@ -6,11 +6,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alexkappa/terraform-provider-auth0/auth0/internal/random"
+	"github.com/auth0/go-auth0/management"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"gopkg.in/auth0.v5/management"
+
+	"github.com/auth0/terraform-provider-auth0/auth0/internal/random"
 )
 
 func init() {
@@ -595,6 +596,66 @@ resource "auth0_connection" "sms" {
 }
 `
 
+func TestAccConnectionCustomSMS(t *testing.T) {
+
+	rand := random.String(6)
+
+	resource.Test(t, resource.TestCase{
+		Providers: map[string]terraform.ResourceProvider{
+			"auth0": Provider(),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: random.Template(testAccConnectionCustomSMSConfig, rand),
+				Check: resource.ComposeTestCheckFunc(
+					random.TestCheckResourceAttr("auth0_connection.sms", "name", "Acceptance-Test-Custom-SMS-{{.random}}", rand),
+					resource.TestCheckResourceAttr("auth0_connection.sms", "strategy", "sms"),
+					resource.TestCheckResourceAttr("auth0_connection.sms", "options.0.totp.#", "1"),
+					resource.TestCheckResourceAttr("auth0_connection.sms", "options.0.totp.0.time_step", "300"),
+					resource.TestCheckResourceAttr("auth0_connection.sms", "options.0.totp.0.length", "6"),
+					resource.TestCheckResourceAttr("auth0_connection.sms", "options.0.gateway_url", "https://somewhere.com/sms-gateway"),
+					resource.TestCheckResourceAttr("auth0_connection.sms", "options.0.gateway_authentication.#", "1"),
+					resource.TestCheckResourceAttr("auth0_connection.sms", "options.0.gateway_authentication.0.method", "bearer"),
+					resource.TestCheckResourceAttr("auth0_connection.sms", "options.0.gateway_authentication.0.subject", "test.us.auth0.com:sms"),
+					resource.TestCheckResourceAttr("auth0_connection.sms", "options.0.gateway_authentication.0.audience", "https://somewhere.com/sms-gateway"),
+					resource.TestCheckResourceAttr("auth0_connection.sms", "options.0.gateway_authentication.0.secret", "4e2680bb72ec2ae24836476dd37ed6c2"),
+				),
+			},
+		},
+	})
+}
+
+const testAccConnectionCustomSMSConfig = `
+
+resource "auth0_connection" "sms" {
+	name = "Acceptance-Test-Custom-SMS-{{.random}}"
+	is_domain_connection = false
+	strategy = "sms"
+	options {
+		disable_signup = false
+		name = "sms"
+		from = "+12345678"
+		syntax = "md_with_macros"
+		template = "@@password@@"
+		brute_force_protection = true
+		totp {
+			time_step = 300
+			length = 6
+		}
+		provider = "sms_gateway"
+		gateway_url = "https://somewhere.com/sms-gateway"
+		gateway_authentication {
+			method = "bearer"
+			subject = "test.us.auth0.com:sms"
+			audience = "https://somewhere.com/sms-gateway"
+			secret = "4e2680bb72ec2ae24836476dd37ed6c2"
+			secret_base64_encoded = false
+		}
+		forward_request_info = true
+	}
+}
+`
+
 func TestAccConnectionEmail(t *testing.T) {
 
 	rand := random.String(6)
@@ -756,6 +817,55 @@ resource "auth0_connection" "google_oauth2" {
 		allowed_audiences = [ "example.com", "api.example.com" ]
 		scopes = [ "email", "profile", "gmail", "youtube" ]
 		set_user_root_attributes = "on_each_login"
+	}
+}
+`
+
+func TestAccConnectionGoogleApps(t *testing.T) {
+
+	rand := random.String(6)
+
+	resource.Test(t, resource.TestCase{
+		Providers: map[string]terraform.ResourceProvider{
+			"auth0": Provider(),
+		},
+		Steps: []resource.TestStep{
+			{
+				Config: random.Template(testAccConnectionGoogleApps, rand),
+				Check: resource.ComposeTestCheckFunc(
+					random.TestCheckResourceAttr("auth0_connection.google_apps", "name", "Acceptance-Test-Google-Apps-{{.random}}", rand),
+					resource.TestCheckResourceAttr("auth0_connection.google_apps", "strategy", "google-apps"),
+					resource.TestCheckResourceAttr("auth0_connection.google_apps", "options.0.client_id", ""),
+					resource.TestCheckResourceAttr("auth0_connection.google_apps", "options.0.client_secret", ""),
+					resource.TestCheckResourceAttr("auth0_connection.google_apps", "options.0.domain", "example.com"),
+					resource.TestCheckResourceAttr("auth0_connection.google_apps", "options.0.tenant_domain", "example.com"),
+					resource.TestCheckResourceAttr("auth0_connection.google_apps", "options.0.domain_aliases.#", "2"),
+					resource.TestCheckResourceAttr("auth0_connection.google_apps", "options.0.domain_aliases.3506632655", "example.com"),
+					resource.TestCheckResourceAttr("auth0_connection.google_apps", "options.0.domain_aliases.3154807651", "api.example.com"),
+					resource.TestCheckResourceAttr("auth0_connection.google_apps", "options.0.api_enable_users", "true"),
+					resource.TestCheckResourceAttr("auth0_connection.google_apps", "options.0.scopes.#", "2"),
+					resource.TestCheckResourceAttr("auth0_connection.google_apps", "options.0.scopes.1268340351", "ext_profile"),
+					resource.TestCheckResourceAttr("auth0_connection.google_apps", "options.0.scopes.541325467", "ext_groups"),
+				),
+			},
+		},
+	})
+}
+
+const testAccConnectionGoogleApps = `
+
+resource "auth0_connection" "google_apps" {
+	name = "Acceptance-Test-Google-Apps-{{.random}}"
+	is_domain_connection = false
+	strategy = "google-apps"
+	options {
+		client_id = ""
+		client_secret = ""
+		domain = "example.com"
+		tenant_domain = "example.com"
+		domain_aliases = [ "example.com", "api.example.com" ]
+		api_enable_users = true
+		scopes = [ "ext_profile", "ext_groups" ]
 	}
 }
 `
@@ -1290,6 +1400,7 @@ func TestAccConnectionSAML(t *testing.T) {
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("auth0_connection.my_connection", "options.0.idp_initiated.0.client_authorize_query", "type=code&timeout=60"),
 					resource.TestCheckResourceAttr("auth0_connection.my_connection", "options.0.sign_out_endpoint", ""),
+					resource.TestCheckResourceAttr("auth0_connection.my_connection", "options.0.entity_id", "example"),
 				),
 			},
 		},
@@ -1332,7 +1443,7 @@ EOF
 		user_id_attribute = "https://saml.provider/imi/ns/identity-200810"
 		tenant_domain = "example.com"
 		domain_aliases = ["example.com", "example.coz"]
-		protocol_binding = "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Post"
+		protocol_binding = "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
 		request_template = "<samlp:AuthnRequest xmlns:samlp=\"urn:oasis:names:tc:SAML:2.0:protocol\"\n@@AssertServiceURLAndDestination@@\n    ID=\"@@ID@@\"\n    IssueInstant=\"@@IssueInstant@@\"\n    ProtocolBinding=\"@@ProtocolBinding@@\" Version=\"2.0\">\n    <saml:Issuer xmlns:saml=\"urn:oasis:names:tc:SAML:2.0:assertion\">@@Issuer@@</saml:Issuer>\n</samlp:AuthnRequest>"
 		signature_algorithm = "rsa-sha256"
 		digest_algorithm = "sha256"
@@ -1385,9 +1496,10 @@ EOF
 		sign_out_endpoint = ""
 		tenant_domain = "example.com"
 		domain_aliases = ["example.com", "example.coz"]
-		protocol_binding = "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Post"
+		protocol_binding = "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
 		signature_algorithm = "rsa-sha256"
 		digest_algorithm = "sha256"
+		entity_id = "example"
 		fields_map = {
 			foo = "bar"
 			baz = "baa"

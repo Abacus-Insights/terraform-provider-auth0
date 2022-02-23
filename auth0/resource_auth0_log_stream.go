@@ -4,10 +4,9 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/auth0/go-auth0/management"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
-
-	"gopkg.in/auth0.v5/management"
 )
 
 func newLogStream() *schema.Resource {
@@ -102,10 +101,11 @@ func newLogStream() *schema.Resource {
 							Type:         schema.TypeString,
 							Optional:     true,
 							RequiredWith: []string{"sink.0.http_endpoint", "sink.0.http_authorization", "sink.0.http_content_type"},
-							Description:  "HTTP Content Format can be JSONLINES or JSONARRAY",
+							Description:  "HTTP Content Format can be JSONLINES, JSONARRAY or JSONOBJECT",
 							ValidateFunc: validation.StringInSlice([]string{
 								"JSONLINES",
 								"JSONARRAY",
+								"JSONOBJECT",
 							}, false),
 						},
 						"http_content_type": {
@@ -352,7 +352,7 @@ func expandLogStream(d ResourceData) *management.LogStream {
 		default:
 			log.Printf("[WARN]: Unsupported log stream sink %s", s)
 			log.Printf("[WARN]: Raise an issue with the auth0 provider in order to support it:")
-			log.Printf("[WARN]: 	https://github.com/alexkappa/terraform-provider-auth0/issues/new")
+			log.Printf("[WARN]: 	https://github.com/auth0/terraform-provider-auth0/issues/new")
 		}
 	})
 

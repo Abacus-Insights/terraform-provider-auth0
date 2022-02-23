@@ -5,13 +5,12 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/auth0/go-auth0"
+	"github.com/auth0/go-auth0/management"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/structure"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
-
-	"gopkg.in/auth0.v5"
-	"gopkg.in/auth0.v5/management"
 )
 
 func newUser() *schema.Resource {
@@ -90,13 +89,13 @@ func newUser() *schema.Resource {
 			"user_metadata": {
 				Type:             schema.TypeString,
 				Optional:         true,
-				ValidateFunc:     validation.ValidateJsonString,
+				ValidateFunc:     validation.StringIsJSON,
 				DiffSuppressFunc: structure.SuppressJsonDiff,
 			},
 			"app_metadata": {
 				Type:             schema.TypeString,
 				Optional:         true,
-				ValidateFunc:     validation.ValidateJsonString,
+				ValidateFunc:     validation.StringIsJSON,
 				DiffSuppressFunc: structure.SuppressJsonDiff,
 			},
 			"blocked": {
@@ -314,14 +313,14 @@ func assignUserRoles(d *schema.ResourceData, m interface{}) error {
 	add, rm := Diff(d, "roles")
 
 	var addRoles []*management.Role
-	for _, addRole := range add {
+	for _, addRole := range add.List() {
 		addRoles = append(addRoles, &management.Role{
 			ID: auth0.String(addRole.(string)),
 		})
 	}
 
 	var rmRoles []*management.Role
-	for _, rmRole := range rm {
+	for _, rmRole := range rm.List() {
 		rmRoles = append(rmRoles, &management.Role{
 			ID: auth0.String(rmRole.(string)),
 		})

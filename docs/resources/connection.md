@@ -99,7 +99,7 @@ With the `auth0` connection strategy, `options` supports the following arguments
 
 #### Password Dictionary
 
-`passsword_dictionary` supports the following arguments:
+`password_dictionary` supports the following arguments:
 
 * `enable` - (Optional) Indicates whether the password dictionary check is enabled for this connection.
 * `dictionary` - (Optional) Customized contents of the password dictionary. By default, the password dictionary contains a list of the [10,000 most common passwords](https://github.com/danielmiessler/SecLists/blob/master/Passwords/Common-Credentials/10k-most-common.txt); your customized content is used in addition to the default password dictionary. Matching is not case-sensitive.
@@ -354,6 +354,40 @@ With the `sms` connection strategy, `options` supports the following arguments:
 * `totp` - (Optional) Configuration options for one-time passwords. For details, see [TOTP](#totp).
 * `messaging_service_sid` - (Optional) SID for Copilot. Used when SMS Source is Copilot.
 
+
+Example of [custom SMS gateway connection](https://auth0.com/docs/authenticate/passwordless/authentication-methods/use-sms-gateway-passwordless):
+
+```hcl
+resource "auth0_connection" "sms" {
+	name = "custom-sms-gateway"
+	is_domain_connection = false
+	strategy = "sms"
+	options {
+		disable_signup = false
+		name = "sms"
+		from = "+15555555555"
+		syntax = "md_with_macros"
+		template = "@@password@@"
+		brute_force_protection = true
+		totp {
+			time_step = 300
+			length = 6
+		}
+		provider = "sms_gateway"
+		gateway_url = "https://somewhere.com/sms-gateway"
+		gateway_authentication {
+			method = "bearer"
+			subject = "test.us.auth0.com:sms"
+			audience = "https://somewhere.com/sms-gateway"
+			secret = "4e2680bb74ec2ae24736476dd37ed6c2"
+			secret_base64_encoded = false
+		}
+		forward_request_info = true
+	}
+}
+
+```
+
 #### TOTP
 
 `totp` supports the following arguments:
@@ -398,7 +432,7 @@ With the `samlp` connection strategy, `options` supports the following arguments
 * `debug` - (Optional) (Boolean) When enabled additional debugging information will be generated.
 * `signing_cert` - The X.509 signing certificate (encoded in PEM or CER) you retrieved from the IdP, Base64-encoded
 * `protocol_binding` - (Optional) The SAML Response Binding - how the SAML token is received by Auth0 from IdP. Two possible values are `urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Redirect` (default) and `urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST`
-* `idpinitiated` - (Optional) Configuration Options for IDP Initiated Authentication.  This is an object with the properties: `client_id`, `client_protocol`, and `client_authorizequery`
+* `idp_initiated` - (Optional) Configuration Options for IDP Initiated Authentication.  This is an object with the properties: `client_id`, `client_protocol`, and `client_authorize_query`
 * `tenant_domain` - (Optional)
 * `domain_aliases` - (Optional) List of the domains that can be authenticated using the Identity Provider. Only needed for Identifier First authentication flows.
 * `sign_in_endpoint` - SAML single login URL for the connection.
@@ -411,6 +445,7 @@ With the `samlp` connection strategy, `options` supports the following arguments
 * `user_id_attribute` - (Optional) Attribute in the SAML token that will be mapped to the user_id property in Auth0.
 * `set_user_root_attributes` - (Optional) Determines whether the 'name', 'given_name', 'family_name', 'nickname', and 'picture' attributes can be independently updated when using the external IdP. Default is `on_each_login` and can be set to `on_first_login`.
 * `non_persistent_attrs` - (Optional) If there are user fields that should not be stored in Auth0 databases due to privacy reasons, you can add them to the denylist. See [here](https://auth0.com/docs/security/denylist-user-attributes) for more info.
+* `entity_id` - (Optional) Custom Entity ID for the connection.
 
 **Example**:
 ```hcl
@@ -423,7 +458,7 @@ resource "auth0_connection" "samlp" {
 		sign_out_endpoint = "https://saml.provider/sign_out"
 		tenant_domain = "example.com"
 		domain_aliases = ["example.com", "alias.example.com"]
-		binding_method = "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-Post"
+		binding_method = "urn:oasis:names:tc:SAML:2.0:bindings:HTTP-POST"
     request_template = "<samlp:AuthnRequest xmlns:samlp=\"urn:oasis:names:tc:SAML:2.0:protocol\"\n@@AssertServiceURLAndDestination@@\n    ID=\"@@ID@@\"\n    IssueInstant=\"@@IssueInstant@@\"\n    ProtocolBinding=\"@@ProtocolBinding@@\" Version=\"2.0\">\n    <saml:Issuer xmlns:saml=\"urn:oasis:names:tc:SAML:2.0:assertion\">@@Issuer@@</saml:Issuer>\n</samlp:AuthnRequest>"
     user_id_attribute = "https://saml.provider/imi/ns/identity-200810"
 		signature_algorithm = "rsa-sha256"

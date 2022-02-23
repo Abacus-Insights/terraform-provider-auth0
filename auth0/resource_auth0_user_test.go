@@ -5,12 +5,12 @@ import (
 	"regexp"
 	"testing"
 
+	"github.com/auth0/go-auth0/management"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"gopkg.in/auth0.v5/management"
 
-	"github.com/alexkappa/terraform-provider-auth0/auth0/internal/random"
+	"github.com/auth0/terraform-provider-auth0/auth0/internal/random"
 )
 
 func init() {

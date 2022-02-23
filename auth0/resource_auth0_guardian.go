@@ -1,11 +1,10 @@
 package auth0
 
 import (
-	"fmt"
+	"github.com/auth0/go-auth0/management"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
-	"gopkg.in/auth0.v5/management"
 )
 
 func newGuardian() *schema.Resource {
@@ -92,9 +91,20 @@ func newGuardian() *schema.Resource {
 					},
 				},
 			},
+			"email": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
+			"otp": {
+				Type:     schema.TypeBool,
+				Optional: true,
+				Default:  false,
+			},
 		},
 	}
 }
+
 func createGuardian(d *schema.ResourceData, m interface{}) error {
 	d.SetId(resource.UniqueId())
 	return updateGuardian(d, m)
@@ -102,40 +112,74 @@ func createGuardian(d *schema.ResourceData, m interface{}) error {
 
 func deleteGuardian(d *schema.ResourceData, m interface{}) error {
 	api := m.(*management.Management)
-	api.Guardian.MultiFactor.Phone.Enable(false)
+	if err := api.Guardian.MultiFactor.Phone.Enable(false); err != nil {
+		return err
+	}
+	if err := api.Guardian.MultiFactor.Email.Enable(false); err != nil {
+		return err
+	}
+	if err := api.Guardian.MultiFactor.OTP.Enable(false); err != nil {
+		return err
+	}
 	d.SetId("")
 	return nil
 }
+
 func updateGuardian(d *schema.ResourceData, m interface{}) (err error) {
 	api := m.(*management.Management)
 
 	if d.HasChange("policy") {
 		p := d.Get("policy").(string)
 		if p == "never" {
-			//Passing empty array to set it to the "never" policy.
+			// Passing empty array to set it to the "never" policy.
 			err = api.Guardian.MultiFactor.UpdatePolicy(&management.MultiFactorPolicies{})
 		} else {
 			err = api.Guardian.MultiFactor.UpdatePolicy(&management.MultiFactorPolicies{p})
 		}
 	}
-	//TODO: Extend for other MFA types
+	if err := updatePhoneFactor(d, api); err != nil {
+		return err
+	}
+	if err := updateEmailFactor(d, api); err != nil {
+		return err
+	}
+	if err := updateOTPFactor(d, api); err != nil {
+		return err
+	}
+	return readGuardian(d, m)
+}
+
+func updatePhoneFactor(d *schema.ResourceData, api *management.Management) error {
 	ok, err := factorShouldBeUpdated(d, "phone")
 	if err != nil {
 		return err
 	}
 	if ok {
-		api.Guardian.MultiFactor.Phone.Enable(true)
-		if err := configurePhone(d, api); err != nil {
+		if err := api.Guardian.MultiFactor.Phone.Enable(true); err != nil {
 			return err
 		}
-	} else {
-		api.Guardian.MultiFactor.Phone.Enable(false)
+		return configurePhone(d, api)
 	}
-	return readGuardian(d, m)
+	return api.Guardian.MultiFactor.Phone.Enable(false)
+}
+
+func updateEmailFactor(d *schema.ResourceData, api *management.Management) error {
+	if changed := d.HasChange("email"); changed {
+		enabled := d.Get("email").(bool)
+		return api.Guardian.MultiFactor.Email.Enable(enabled)
+	}
+	return nil
+}
+
+func updateOTPFactor(d *schema.ResourceData, api *management.Management) error {
+	if changed := d.HasChange("otp"); changed {
+		enabled := d.Get("otp").(bool)
+		return api.Guardian.MultiFactor.OTP.Enable(enabled)
+	}
+	return nil
 }
 
 func configurePhone(d *schema.ResourceData, api *management.Management) (err error) {
-
 	md := make(MapData)
 	List(d, "phone").Elem(func(d ResourceData) {
 		md.Set("provider", String(d, "provider", HasChange()))
@@ -241,6 +285,7 @@ func readGuardian(d *schema.ResourceData, m interface{}) error {
 	if err != nil {
 		return err
 	}
+
 	ok, err := factorShouldBeUpdated(d, "phone")
 	if err != nil {
 		return err
@@ -253,6 +298,21 @@ func readGuardian(d *schema.ResourceData, m interface{}) error {
 	}
 	if err != nil {
 		return err
+	}
+
+	factors, err := api.Guardian.MultiFactor.List()
+	if err != nil {
+		return err
+	}
+	for _, v := range factors {
+		if v.Name != nil {
+			if *v.Name == "email" {
+				d.Set("email", v.Enabled)
+			}
+			if *v.Name == "otp" {
+				d.Set("otp", v.Enabled)
+			}
+		}
 	}
 	return nil
 }
@@ -306,19 +366,6 @@ func typeAssertToStringArray(from []interface{}) *[]string {
 		stringArray[i] = v.(string)
 	}
 	return &stringArray
-}
-
-func isFactorEnabled(factor string, api *management.Management) (*bool, error) {
-	mfs, err := api.Guardian.MultiFactor.List()
-	if err != nil {
-		return nil, err
-	}
-	for _, mf := range mfs {
-		if *mf.Name == factor {
-			return mf.Enabled, nil
-		}
-	}
-	return nil, fmt.Errorf("factor %s is not among the possible factors", factor)
 }
 
 // Determines if the factor should be updated. This depends on if it is in the state, if it is about to be added to the state.

@@ -1,9 +1,10 @@
 package auth0
 
 import (
+	"testing"
+
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"testing"
 )
 
 func TestAccGuardian(t *testing.T) {
@@ -86,6 +87,38 @@ func TestAccGuardian(t *testing.T) {
 					resource.TestCheckNoResourceAttr("auth0_guardian.foo", "phone"),
 				),
 			},
+
+			{
+				Config: testAccConfigureEmail,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("auth0_guardian.foo", "policy", "all-applications"),
+					resource.TestCheckResourceAttr("auth0_guardian.foo", "email", "true"),
+				),
+			},
+
+			{
+				Config: testAccConfigureEmailUpdate,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("auth0_guardian.foo", "policy", "all-applications"),
+					resource.TestCheckResourceAttr("auth0_guardian.foo", "email", "false"),
+				),
+			},
+
+			{
+				Config: testAccConfigureOTP,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("auth0_guardian.foo", "policy", "all-applications"),
+					resource.TestCheckResourceAttr("auth0_guardian.foo", "otp", "true"),
+				),
+			},
+
+			{
+				Config: testAccConfigureOTPUpdate,
+				Check: resource.ComposeTestCheckFunc(
+					resource.TestCheckResourceAttr("auth0_guardian.foo", "policy", "all-applications"),
+					resource.TestCheckResourceAttr("auth0_guardian.foo", "otp", "false"),
+				),
+			},
 		},
 	})
 }
@@ -159,5 +192,37 @@ const testAccConfigureNoPhone = `
 
 resource "auth0_guardian" "foo" {
   policy = "all-applications"
+}
+`
+
+const testAccConfigureEmail = `
+
+resource "auth0_guardian" "foo" {
+  policy = "all-applications"
+  email  = true
+}
+`
+
+const testAccConfigureEmailUpdate = `
+
+resource "auth0_guardian" "foo" {
+  policy = "all-applications"
+  email  = false
+}
+`
+
+const testAccConfigureOTP = `
+
+resource "auth0_guardian" "foo" {
+	policy = "all-applications"
+	otp  = true
+}
+`
+
+const testAccConfigureOTPUpdate = `
+
+resource "auth0_guardian" "foo" {
+	policy = "all-applications"
+	otp  = false
 }
 `

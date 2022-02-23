@@ -4,11 +4,10 @@ import (
 	"log"
 	"net/http"
 
+	"github.com/auth0/go-auth0"
+	"github.com/auth0/go-auth0/management"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
-
-	"gopkg.in/auth0.v5"
-	"gopkg.in/auth0.v5/management"
 )
 
 func newEmailTemplate() *schema.Resource {
@@ -37,6 +36,7 @@ func newEmailTemplate() *schema.Resource {
 					"change_password",
 					"password_reset",
 					"mfa_oob_code",
+					"user_invitation",
 				}, true),
 			},
 			"body": {

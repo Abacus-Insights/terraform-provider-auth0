@@ -4,13 +4,12 @@ import (
 	"net/http"
 	"strconv"
 
+	"github.com/auth0/go-auth0"
+	"github.com/auth0/go-auth0/management"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 
-	"gopkg.in/auth0.v5"
-	"gopkg.in/auth0.v5/management"
-
-	v "github.com/alexkappa/terraform-provider-auth0/auth0/internal/validation"
+	v "github.com/auth0/terraform-provider-auth0/auth0/internal/validation"
 )
 
 func newClient() *schema.Resource {
@@ -93,7 +92,26 @@ func newClient() *schema.Resource {
 				Computed: true,
 				Optional: true,
 			},
+			"organization_usage": {
+				Type:     schema.TypeString,
+				Optional: true,
+				ValidateFunc: validation.StringInSlice([]string{
+					"deny", "allow", "require",
+				}, false),
+			},
+			"organization_require_behavior": {
+				Type:     schema.TypeString,
+				Optional: true,
+				ValidateFunc: validation.StringInSlice([]string{
+					"no_prompt", "pre_login_prompt",
+				}, false),
+			},
 			"allowed_origins": {
+				Type:     schema.TypeList,
+				Elem:     &schema.Schema{Type: schema.TypeString},
+				Optional: true,
+			},
+			"allowed_clients": {
 				Type:     schema.TypeList,
 				Elem:     &schema.Schema{Type: schema.TypeString},
 				Optional: true,
@@ -356,6 +374,10 @@ func newClient() *schema.Resource {
 										Type:     schema.TypeString,
 										Optional: true,
 									},
+									"signing_cert": {
+										Type:     schema.TypeString,
+										Optional: true,
+									},
 								},
 							},
 						},
@@ -477,6 +499,42 @@ func newClient() *schema.Resource {
 					v.IsURLWithNoFragment,
 				),
 			},
+			"native_social_login": {
+				Type:     schema.TypeList,
+				Optional: true,
+				Computed: true,
+				MaxItems: 1,
+				Elem: &schema.Resource{
+					Schema: map[string]*schema.Schema{
+						"apple": {
+							Type:     schema.TypeList,
+							Optional: true,
+							MaxItems: 1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"enabled": {
+										Type:     schema.TypeBool,
+										Optional: true,
+									},
+								},
+							},
+						},
+						"facebook": {
+							Type:     schema.TypeList,
+							Optional: true,
+							MaxItems: 1,
+							Elem: &schema.Resource{
+								Schema: map[string]*schema.Schema{
+									"enabled": {
+										Type:     schema.TypeBool,
+										Optional: true,
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 			"refresh_token": {
 				Type:     schema.TypeList,
 				Optional: true,
@@ -524,6 +582,11 @@ func newClient() *schema.Resource {
 					},
 				},
 			},
+			"signing_keys": {
+				Type:     schema.TypeList,
+				Elem:     &schema.Schema{Type: schema.TypeMap},
+				Computed: true,
+			},
 		},
 	}
 }
@@ -563,7 +626,10 @@ func readClient(d *schema.ResourceData, m interface{}) error {
 	d.Set("callbacks", c.Callbacks)
 	d.Set("allowed_logout_urls", c.AllowedLogoutURLs)
 	d.Set("allowed_origins", c.AllowedOrigins)
+	d.Set("allowed_clients", c.AllowedClients)
 	d.Set("grant_types", c.GrantTypes)
+	d.Set("organization_usage", c.OrganizationUsage)
+	d.Set("organization_require_behavior", c.OrganizationRequireBehavior)
 	d.Set("web_origins", c.WebOrigins)
 	d.Set("sso", c.SSO)
 	d.Set("sso_disabled", c.SSODisabled)
@@ -573,6 +639,7 @@ func readClient(d *schema.ResourceData, m interface{}) error {
 	d.Set("custom_login_page", c.CustomLoginPage)
 	d.Set("form_template", c.FormTemplate)
 	d.Set("token_endpoint_auth_method", c.TokenEndpointAuthMethod)
+	d.Set("native_social_login", flattenCustomSocialConfiguration(c.NativeSocialLogin))
 	d.Set("jwt_configuration", flattenClientJwtConfiguration(c.JWTConfiguration))
 	d.Set("refresh_token", flattenClientRefreshTokenConfiguration(c.RefreshToken))
 	d.Set("encryption_key", c.EncryptionKey)
@@ -580,6 +647,7 @@ func readClient(d *schema.ResourceData, m interface{}) error {
 	d.Set("client_metadata", c.ClientMetadata)
 	d.Set("mobile", c.Mobile)
 	d.Set("initiate_login_uri", c.InitiateLoginURI)
+	d.Set("signing_keys", c.SigningKeys)
 
 	return nil
 }
@@ -629,7 +697,10 @@ func expandClient(d *schema.ResourceData) *management.Client {
 		Callbacks:                      Slice(d, "callbacks"),
 		AllowedLogoutURLs:              Slice(d, "allowed_logout_urls"),
 		AllowedOrigins:                 Slice(d, "allowed_origins"),
+		AllowedClients:                 Slice(d, "allowed_clients"),
 		GrantTypes:                     Slice(d, "grant_types"),
+		OrganizationUsage:              String(d, "organization_usage"),
+		OrganizationRequireBehavior:    String(d, "organization_require_behavior"),
 		WebOrigins:                     Slice(d, "web_origins"),
 		SSO:                            Bool(d, "sso"),
 		SSODisabled:                    Bool(d, "sso_disabled"),
@@ -694,6 +765,7 @@ func expandClient(d *schema.ResourceData) *management.Client {
 			m.Set("audience", String(d, "audience"))
 			m.Set("authnContextClassRef", String(d, "authn_context_class_ref"))
 			m.Set("binding", String(d, "binding"))
+			m.Set("signingCert", String(d, "signing_cert"))
 			m.Set("createUpnClaim", Bool(d, "create_upn_claim"))
 			m.Set("destination", String(d, "destination"))
 			m.Set("digestAlgorithm", String(d, "digest_algorithm"))
@@ -721,6 +793,24 @@ func expandClient(d *schema.ResourceData) *management.Client {
 			c.ClientMetadata[key] = (value.(string))
 		}
 	}
+
+	List(d, "native_social_login").Elem(func(d ResourceData) {
+		c.NativeSocialLogin = &management.ClientNativeSocialLogin{}
+
+		List(d, "apple").Elem(func(d ResourceData) {
+			m := make(MapData)
+			m.Set("enabled", Bool(d, "enabled"))
+
+			c.NativeSocialLogin.Apple = m
+		})
+
+		List(d, "facebook").Elem(func(d ResourceData) {
+			m := make(MapData)
+			m.Set("enabled", Bool(d, "enabled"))
+
+			c.NativeSocialLogin.Facebook = m
+		})
+	})
 
 	List(d, "mobile").Elem(func(d ResourceData) {
 
@@ -795,6 +885,27 @@ func clientHasChange(c *management.Client) bool {
 	return c.String() != "{}"
 }
 
+func flattenCustomSocialConfiguration(customSocial *management.ClientNativeSocialLogin) []interface{} {
+	if customSocial != nil {
+		m := make(map[string]interface{})
+
+		if customSocial.Apple != nil {
+			m["apple"] = map[string]interface{}{
+				"enabled": customSocial.Apple["enabled"],
+			}
+		}
+		if customSocial.Facebook != nil {
+			m["facebook"] = map[string]interface{}{
+				"enabled": customSocial.Facebook["enabled"],
+			}
+		}
+
+		return []interface{}{m}
+	}
+
+	return nil
+}
+
 func flattenClientJwtConfiguration(jwt *management.ClientJWTConfiguration) []interface{} {
 	m := make(map[string]interface{})
 	if jwt != nil {
@@ -806,16 +917,16 @@ func flattenClientJwtConfiguration(jwt *management.ClientJWTConfiguration) []int
 	return []interface{}{m}
 }
 
-func flattenClientRefreshTokenConfiguration(refresh_token *management.ClientRefreshToken) []interface{} {
+func flattenClientRefreshTokenConfiguration(refreshToken *management.ClientRefreshToken) []interface{} {
 	m := make(map[string]interface{})
-	if refresh_token != nil {
-		m["rotation_type"] = refresh_token.RotationType
-		m["expiration_type"] = refresh_token.ExpirationType
-		m["leeway"] = refresh_token.Leeway
-		m["token_lifetime"] = refresh_token.TokenLifetime
-		m["infinite_token_lifetime"] = refresh_token.InfiniteTokenLifetime
-		m["infinite_idle_token_lifetime"] = refresh_token.InfiniteIdleTokenLifetime
-		m["idle_token_lifetime"] = refresh_token.IdleTokenLifetime
+	if refreshToken != nil {
+		m["rotation_type"] = refreshToken.RotationType
+		m["expiration_type"] = refreshToken.ExpirationType
+		m["leeway"] = refreshToken.Leeway
+		m["token_lifetime"] = refreshToken.TokenLifetime
+		m["infinite_token_lifetime"] = refreshToken.InfiniteTokenLifetime
+		m["infinite_idle_token_lifetime"] = refreshToken.InfiniteIdleTokenLifetime
+		m["idle_token_lifetime"] = refreshToken.IdleTokenLifetime
 	}
 	return []interface{}{m}
 }

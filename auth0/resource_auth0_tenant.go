@@ -3,13 +3,12 @@ package auth0
 import (
 	"net/http"
 
+	"github.com/auth0/go-auth0/management"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/schema"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/validation"
 
-	"gopkg.in/auth0.v5/management"
-
-	v "github.com/alexkappa/terraform-provider-auth0/auth0/internal/validation"
+	v "github.com/auth0/terraform-provider-auth0/auth0/internal/validation"
 )
 
 func newTenant() *schema.Resource {
@@ -148,11 +147,6 @@ func newTenant() *schema.Resource {
 				MaxItems: 1,
 				Elem: &schema.Resource{
 					Schema: map[string]*schema.Schema{
-						"change_pwd_flow_v1": {
-							Type:     schema.TypeBool,
-							Optional: true,
-							Computed: true,
-						},
 						"enable_client_connections": {
 							Type:     schema.TypeBool,
 							Optional: true,

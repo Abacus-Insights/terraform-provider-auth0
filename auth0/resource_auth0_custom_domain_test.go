@@ -5,10 +5,11 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/alexkappa/terraform-provider-auth0/auth0/internal/random"
 	"github.com/hashicorp/go-multierror"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
+
+	"github.com/auth0/terraform-provider-auth0/auth0/internal/random"
 )
 
 func init() {
@@ -63,6 +64,5 @@ const testAccCustomDomain = `
 resource "auth0_custom_domain" "my_custom_domain" {
   domain = "{{.random}}.auth.uat.alexkappa.com"
   type = "auth0_managed_certs"
-  verification_method = "txt"
 }
 `

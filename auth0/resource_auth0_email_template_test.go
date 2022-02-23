@@ -3,10 +3,10 @@ package auth0
 import (
 	"testing"
 
+	"github.com/auth0/go-auth0"
+	"github.com/auth0/go-auth0/management"
 	"github.com/hashicorp/terraform-plugin-sdk/helper/resource"
 	"github.com/hashicorp/terraform-plugin-sdk/terraform"
-	"gopkg.in/auth0.v5"
-	"gopkg.in/auth0.v5/management"
 )
 
 func init() {
@@ -32,7 +32,7 @@ func TestAccEmailTemplate(t *testing.T) {
 			"auth0": Provider(),
 		},
 		Steps: []resource.TestStep{
-			resource.TestStep{
+			{
 				Config: testAccEmailTemplateConfig,
 				Check: resource.ComposeTestCheckFunc(
 					resource.TestCheckResourceAttr("auth0_email_template.my_email_template", "template", "welcome_email"),
